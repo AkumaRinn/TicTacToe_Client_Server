@@ -1,0 +1,141 @@
+import random
+import socket
+
+host = '127.0.0.1'
+port = 5678
+print("Port creat")
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+s.bind((host,port))
+#serverul asteapta pentru conexiune
+s.listen(1)
+print("Serverul asteapta conexiune...")
+client, addr = s.accept()
+print("Client conectat.")
+
+
+board = [["_","_","_"],["_","_","_"],["_","_","_"]]
+
+def checkForWinner(alegere_player,alegere_computer):
+
+    global board
+    winner = ''
+    for row in range(3):
+        if board[row][0] == board[row][1] == board[row][2] != "_":
+            winner = board[row][0]
+
+    for col in range(3):
+        if board[0][col] == board[1][col] == board[2][col] !="_":
+            winner = board[0][col]
+
+    if board[0][0] == board[1][1] == board[2][2] != "_":
+        winner = board[0][0]
+
+    if board[0][2] == board [1][1] == board[2][0] != "_":
+        winner=board[0][2]
+
+    if winner == alegere_player:
+        return ("Felicitari, ai castigat!")
+    elif winner == alegere_computer:
+        return ("Computerul a castigat!")
+
+
+
+def checkForEmpty():
+    global board
+    count = 0
+    for i in range(0,3):
+        for j in range(0,3):
+            if board[i][j] == "_":
+                count +=1
+    if count == 0:
+        return False
+    else:
+        return True
+
+
+
+
+def main():
+    global board
+    move_options = ["x","0"]
+    move_choice = "What symbol do you want? X/0"
+    #trimite intrebare pentru simbol
+    client.send(move_choice.encode('utf-8'))
+    #primeste simbolul ales
+    chosen_symbol = client.recv(1024).decode()
+
+    if chosen_symbol == move_options[0]:
+        computer_choice = move_options[1]
+    elif chosen_symbol == move_options[1]:
+        computer_choice = move_options[0]
+    print(f"The user chose {chosen_symbol}")
+    print(f"The computer will use {computer_choice}")
+    # trimite simbolul ales de computer
+    client.sendall(str(computer_choice).strip().encode('utf-8'))
+
+
+    play = True
+    keep_playing = checkForEmpty()
+    while play and keep_playing:
+
+        #Trimite intrebare pentru coordonate
+        choose_coordinates = '\nWhere do you want to place the symbol?[][]\n'
+        client.send(choose_coordinates.encode('utf-8'))
+        #primeste raspuns pentru coordonatele alese de jucator
+        chosen_coordinates=client.recv(1024).strip().decode().split(',')
+        print(chosen_coordinates)
+        board[int(chosen_coordinates[0])][int(chosen_coordinates[1])] = chosen_symbol
+        #verifica daca dupa alegerea jucatorului exista castigator
+        winner = (checkForWinner(chosen_symbol,computer_choice))
+
+        #alegere computer
+        x_coord = random.randint(0,2)
+        y_coord = random.randint(0,2)
+        corect = True
+        #verifica daca alegerea computerului e valabila
+        while corect:
+            if board[x_coord][y_coord] != "_":
+                x_coord = random.randint(0,2)
+                y_coord = random.randint(0,2)
+                keep_playing=checkForEmpty()
+                if keep_playing == False:
+                    break
+
+            else:
+                board[x_coord][y_coord] = computer_choice
+                #verifica daca dupa alegerea computerului exista castigator
+                winner = (checkForWinner(chosen_symbol,computer_choice))
+                corect = False
+
+
+        #trimite coordonata x a computerului
+        client.sendall(str(x_coord).strip().encode('utf-8'))
+        #trimite coordonata y a computerului
+        client.sendall(str(y_coord).strip().encode('utf-8'))
+
+
+        #printeaza tabla de joc
+        for items in board:
+            print("|".join(items))
+        print("\n")
+        #daca exista castigator, jocul se termina
+        if winner != None:
+            play = False
+        # verifica daca mai exista locuri libere
+        keep_playing = checkForEmpty()
+
+
+    # printeaza tabla de joc
+    for items in board:
+        print("|".join(items))
+    print("\n")
+    #daca nu exista castigator si tabla de joc este completata, jocul se opreste
+    if winner == None:
+        message = "Jocul s-a terminat cu o remiza."
+        client.send(message.encode("utf-8"))
+
+
+    client.close()
+
+
+main()
