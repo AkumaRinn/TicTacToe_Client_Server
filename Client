@@ -1,0 +1,125 @@
+import socket
+
+host = '127.0.0.1'
+port = 5678
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+#conectare la server folosind ip si port
+s.connect((host,port))
+
+board = [["_","_","_"],["_","_","_"],["_","_","_"]]
+
+def checkForWinner(alegere_player,alegere_computer):
+    global board
+    winner = ''
+    for row in range(3):
+        if board[row][0] == board[row][1] == board[row][2] != "_":
+            winner = board[row][0]
+
+    for col in range(3):
+        if board[0][col] == board[1][col] == board[2][col] !="_":
+            winner = board[0][col]
+
+    if board[0][0] == board[1][1] == board[2][2] != "_":
+        winner = board[0][0]
+
+    if board[0][2] == board [1][1] == board[2][0] != "_":
+        winner=board[0][2]
+
+    if winner == alegere_player:
+        return ("Felicitari, ai castigat!")
+    elif winner == alegere_computer:
+        return ("Computerul a castigat!")
+
+
+def checkForEmpty():
+    global board
+    count = 0
+    for i in range(0,3):
+        for j in range(0,3):
+            if board[i][j] == "_":
+                count +=1
+    if count == 0:
+        return False
+    else:
+        return True
+
+
+#primeste intrebare pentru alegere simbol
+alegere_simbol = s.recv(1024).decode()
+print(alegere_simbol)
+chosen_symbol = str(input().lower())
+#trimite simbolul ales
+correct = False
+while correct == False:
+    if chosen_symbol == "x":
+        s.send(chosen_symbol.strip().encode('utf-8'))
+        correct = True
+    elif chosen_symbol == "0":
+        s.send(chosen_symbol.strip().encode('utf-8'))
+        correct = True
+    else:
+        print("Please enter a valid value.x/0")
+        chosen_symbol = str(input().lower())
+
+
+# primeste symbolul computerului
+computer_choice = s.recv(1024).strip().decode()
+
+keep_playing = checkForEmpty()
+play = True
+while play and keep_playing:
+    #primeste intrebare pentru coordonate
+    mesaj=s.recv(1024).decode()
+    print(mesaj)
+    #trimite coordonatele alese
+    chosen_coordinates=input().strip()
+    incearca = True
+    while incearca:
+        incercare = chosen_coordinates.split(',')
+        if board[int(incercare[0])][int(incercare[1])] == "_":
+            s.sendall(chosen_coordinates.strip().encode('utf-8'))
+            board[int(incercare[0])][int(incercare[1])] = chosen_symbol
+            #verifica daca dupa alegerea jucatorului exista castigator
+            winner = (checkForWinner(chosen_symbol,computer_choice))
+            incearca = False
+        else:
+            print("Pozitia este ocupata, alege din nou.")
+            chosen_coordinates = input().strip()
+            print(type(chosen_coordinates))
+
+
+
+
+
+    #primeste coordonata x
+    coordX = s.recv(1024).strip().decode()
+    coordX = int(coordX)
+    #primeste coordonata y
+    coordY = s.recv(1024).strip().decode()
+    coordY = int(coordY)
+    print(coordX)
+    print(coordY)
+
+    board[coordX][coordY] = computer_choice
+
+    #verifica daca dupa alegerea computerului exista castigator
+    winner = (checkForWinner(chosen_symbol,computer_choice))
+
+    for items in board:
+        print("|".join(items))
+    print("\n")
+    # daca exista castigator, jocul se termina
+    if winner != None:
+        play = False
+    print(winner)
+    # verifica daca mai exista locuri libere
+    keep_playing = checkForEmpty()
+
+
+for items in board:
+    print("|".join(items))
+print("\n")
+if winner == None:
+    print(s.recv(1024).decode())
+
+s.close()
